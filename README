@@ -1,0 +1,66 @@
+-- Server-Side Script: Handle Reach Control
+
+local function updateReach(player, multiplier)
+    local character = player.Character
+    if not character then return end
+    
+    local primaryPart = character:FindFirstChild("HumanoidRootPart")
+    if not primaryPart then return end
+
+    local originalSize = primaryPart.Size
+    local targetSize = originalSize * multiplier
+
+    for i = 1, 10 do
+        primaryPart.Size = primaryPart.Size:Lerp(targetSize, 0.1)
+        wait(0.1)
+    end
+end
+
+local reachControlEvent = Instance.new("RemoteEvent")
+reachControlEvent.Name = "ReachControlEvent"
+reachControlEvent.Parent = game.ReplicatedStorage
+
+reachControlEvent.OnServerEvent:Connect(function(player, multiplier)
+    if multiplier > 0.5 and multiplier < 1.5 then
+        updateReach(player, multiplier)
+    else
+        warn("Suspicious multiplier value from player: " .. player.Name)
+    end
+end)
+
+-- Client-Side Script: Send requests to the server
+
+local player = game.Players.LocalPlayer
+local reachControlEvent = game.ReplicatedStorage:WaitForChild("ReachControlEvent")
+
+local increaseButton = script.Parent:FindFirstChild("IncreaseReach")
+local decreaseButton = script.Parent:FindFirstChild("DecreaseReach")
+
+local cooldown = 0.5
+local lastUpdate = tick()
+
+local function sendReachChange(multiplier)
+    if tick() - lastUpdate >= cooldown then
+        reachControlEvent:FireServer(multiplier)
+        lastUpdate = tick()
+    end
+end
+
+if increaseButton then
+    increaseButton.MouseButton1Click:Connect(function()
+        sendReachChange(1.05)
+    end)
+    increaseButton.TouchTap:Connect(function()
+        sendReachChange(1.05)
+    end)
+end
+
+if decreaseButton then
+    decreaseButton.MouseButton1Click:Connect(function()
+        sendReachChange(0.95)
+    end)
+    decreaseButton.TouchTap:Connect(function()
+        sendReachChange(0.95)
+    end)
+end 
+
